@@ -2,12 +2,17 @@ package com.example.cryptoapp
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.Toast
+import androidx.core.view.isVisible
+import androidx.core.widget.addTextChangedListener
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.example.cryptoapp.databinding.ActivityMainBinding
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -24,6 +29,33 @@ class MainActivity : AppCompatActivity() {
 
         binding.rv.layoutManager = LinearLayoutManager(this)
         binding.rv.adapter = rvAdapter
+
+        binding.search.addTextChangedListener(object :TextWatcher{
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+
+            }
+
+            override fun afterTextChanged(s: Editable?) {
+               val filterdata = ArrayList<Model>()
+                for (item in data){
+                    if (item.name.lowercase(Locale.getDefault()).contains(s.toString().lowercase(Locale.getDefault())))
+                    {
+                      filterdata.add(item)
+                    }
+
+                }
+                if (filterdata.isEmpty()){
+                    Toast.makeText(this@MainActivity, "No data available!", Toast.LENGTH_SHORT).show()
+                }else{
+                    rvAdapter.changeData(filterdata)
+                }
+            }
+
+        })
     }
     val apiData:Unit
         get() {
@@ -33,6 +65,7 @@ class MainActivity : AppCompatActivity() {
             val jsonObjectRequest:JsonObjectRequest =
                 object :JsonObjectRequest(Method.GET, url, null, Response.Listener {
                     response ->
+                    binding.progressBar.isVisible = false
                     try {
                         val dataArray = response.getJSONArray("data")
                         for (i in 0 until dataArray.length())
@@ -42,8 +75,8 @@ class MainActivity : AppCompatActivity() {
                             val name = dataObject.getString("name")
                             val quote = dataObject.getJSONObject("quote")
                             val USD = quote.getJSONObject("USD")
-                            val price = USD.getDouble("price")
-                            data.add(Model(name,symbol,price.toString()))
+                            val price = String.format("$ "+"%.2f", USD.getDouble("price"))
+                            data.add(Model(name,symbol,price))
                         }
                         rvAdapter.notifyDataSetChanged()
                     }catch (e:Exception){
